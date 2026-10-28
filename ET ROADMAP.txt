@@ -1,0 +1,50 @@
+B.Tech Project: Personal Expense Tracker & Budget Analyzer
+Quick Roadmap & Checklist
+===========================================================
+
+Stage 1: App Setup & Layout
+• Set up the Python virtual environment and install Flask.
+• Create the project folder structure (templates/, static/, instance/).
+• Build the main app layout with a responsive sidebar and a light/dark mode switch.
+
+Stage 2: Database Setup (SQLite)
+• Create database tables for transactions and monthly/category budgets.
+• Write simple Python functions to add, view, edit, and delete records.
+• Add a seed command to quickly load sample test data.
+
+Stage 3: Add Income & Expenses
+• Build the transaction entry form for both income and expenses.
+• Add dynamic field switching (shows "Category" for expenses and "Source" for income).
+• Add server-side validation to reject negative values or invalid dates.
+
+Stage 4: Dashboard & Summary Cards
+• Calculate live totals: Total Income, Total Expenses, and Net Balance.
+• Display the current month's spending and budget usage percentage.
+• Show a "Recent Transactions" table on the home screen.
+
+Stage 5: Charts & Visual Reports
+• Add Chart.js to render interactive charts using real database data.
+• Build a doughnut chart for expense categories, a bar chart for income vs. expense, and a line chart for spending trends.
+• Display rule-based spending insights (e.g., your highest-spending category).
+
+Stage 6: Budgets & Spending Warnings
+• Allow users to set overall monthly budgets and limits for specific categories.
+• Add color-coded progress bars (Green = Safe, Yellow = Warning, Red = Exceeded).
+• Show alert banners when spending crosses budget limits.
+
+Stage 7: Search, Filters & CSV Export
+• Add search by description and filters by date, type, and category.
+• Add sorting by date or amount, plus pagination for large lists.
+• Add a one-click button to download all transactions as a CSV file.
+
+Stage 8: UI Polish & Mobile Responsiveness
+• Ensure the entire interface looks clean on desktop, tablet, and mobile.
+• Improve dark mode contrast, button styles, and form error indicators.
+
+Stage 9: Testing & Bug Fixes
+• Test all routes, form inputs, database queries, and security checks.
+• Verify edge cases (e.g., empty database, zero budgets, invalid inputs).
+
+Stage 10: Final Documentation & Project Report
+• Write a clear README.md with setup and run instructions.
+• Prepare the formal B.Tech project report (Abstract, Architecture, ER Diagram, Testing, and Future Scope).

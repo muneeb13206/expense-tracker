@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Error {{ code }}{% endblock %}
+{% block heading %}Error {{ code }}{% endblock %}
+{% block content %}
+<div class="card empty-state">
+  <i class="fa-solid fa-triangle-exclamation"></i>
+  <h2>{{ code }}</h2>
+  <p>{{ message }}</p>
+  <a class="btn" href="{{ url_for('dashboard') }}">Back to Dashboard</a>
+</div>
+{% endblock %}
