@@ -1,7 +1,9 @@
 """
 Personal Expense Tracker and Budget Analyzer
+--------------------------------------------
 app.py : creates the Flask application, configures it securely,
          and registers all routes (URLs).
+
 """
 import os
 import secrets
@@ -11,7 +13,7 @@ from flask import Flask, abort, flash, redirect, render_template, request, url_f
 from flask_wtf.csrf import CSRFProtect
 
 import database
-from utils import format_inr
+from utils import budget_status, format_inr
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 INSTANCE_DIR = os.path.join(BASE_DIR, "instance")
@@ -22,8 +24,11 @@ csrf = CSRFProtect()  # protects every POST form against CSRF attacks
 def load_secret_key() -> str:
     """
     Return a secret key used to sign session cookies and CSRF tokens.
+
+    Priority:
       1. SECRET_KEY environment variable (best for deployment)
-      2. Otherwise a random key generated once and saved in instance/secret_key
+      2. A random key generated once and saved in instance/secret_key
+         (so the key is never hard-coded in the source code)
     """
     env_key = os.environ.get("SECRET_KEY")
     if env_key:
@@ -44,9 +49,9 @@ def create_app(test_config=None) -> Flask:
 
     app.config.update(
         SECRET_KEY=load_secret_key(),
-        DATABASE=os.path.join(INSTANCE_DIR, "expense_tracker.db"),
-        SESSION_COOKIE_HTTPONLY=True,        # JavaScript cannot read the cookie
-        SESSION_COOKIE_SAMESITE="Lax",       # blocks most cross-site requests
+        DATABASE=os.path.join(INSTANCE_DIR, "expense_tracker.db"),  # used in Stage 2
+        SESSION_COOKIE_HTTPONLY=True,      # JavaScript cannot read the cookie
+        SESSION_COOKIE_SAMESITE="Lax",     # blocks most cross-site requests
         MAX_CONTENT_LENGTH=1 * 1024 * 1024,  # reject request bodies > 1 MB
     )
 
@@ -73,7 +78,35 @@ def register_routes(app: Flask) -> None:
 
     @app.route("/")
     def dashboard():
-        return render_template("dashboard.html", active="dashboard")
+        today = date.today()
+        month = today.strftime("%Y-%m")
+        total_count = database.count_transactions()
+        context = {"has_data": total_count > 0,
+                   "sample_count": database.count_sample_transactions(),
+                   "month_label": today.strftime("%B %Y")}
+        if total_count:
+            month_totals = database.get_totals(month)
+            budget_row = database.get_monthly_budget(month)
+            context.update(
+                totals=database.get_totals(),
+                month_totals=month_totals,
+                budget=budget_status(month_totals["expense"],
+                                     budget_row["amount"] if budget_row else None),
+                recent=database.list_transactions(limit=8),
+            )
+        return render_template("dashboard.html", active="dashboard", **context)
+
+    @app.route("/sample-data/load", methods=["POST"])
+    def load_sample():
+        count = database.seed_sample_data()
+        flash(f"Loaded {count} sample transactions. Your own data is untouched.", "success")
+        return redirect(url_for("dashboard"))
+
+    @app.route("/sample-data/clear", methods=["POST"])
+    def clear_sample():
+        count = database.clear_sample_data()
+        flash(f"Removed {count} sample transactions.", "success")
+        return redirect(url_for("dashboard"))
 
     @app.route("/transactions")
     def transactions():

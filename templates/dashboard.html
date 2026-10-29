@@ -2,10 +2,129 @@
 {% block title %}Dashboard{% endblock %}
 {% block heading %}Dashboard{% endblock %}
 {% block content %}
+
+{% if not has_data %}
 <div class="card empty-state">
   <i class="fa-solid fa-gauge-high"></i>
-  <h2>Dashboard</h2>
-  <p>Summary cards, recent transactions and charts will appear here.</p>
-  <span class="badge">Built in Stage 4</span>
+  <h2>Welcome to {{ app_name }}</h2>
+  <p>Add your first transaction, or load demo data to see how the dashboard works.</p>
+  <div class="empty-actions">
+    <a class="btn" href="{{ url_for('add_transaction') }}">
+      <i class="fa-solid fa-plus"></i> Add Transaction</a>
+    <form method="post" action="{{ url_for('load_sample') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-secondary" type="submit">
+        <i class="fa-solid fa-flask"></i> Load sample data</button>
+    </form>
+  </div>
 </div>
+
+{% else %}
+
+{% if sample_count %}
+<div class="sample-banner">
+  <span><i class="fa-solid fa-flask"></i> Demo data is loaded ({{ sample_count }} sample transactions).</span>
+  <form method="post" action="{{ url_for('clear_sample') }}"
+        data-confirm="Remove all sample transactions? Your own transactions will not be touched.">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn btn-sm btn-secondary" type="submit">Clear sample data</button>
+  </form>
+</div>
+{% endif %}
+
+{% if budget and budget.state == 'over' %}
+<div class="alert alert-error">
+  You have exceeded your {{ month_label }} budget by {{ (-budget.remaining)|inr }}.</div>
+{% elif budget and budget.state == 'warning' %}
+<div class="alert alert-warning">
+  You have used {{ budget.percent }}% of your {{ month_label }} budget. You are close to the limit.</div>
+{% endif %}
+
+<section class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-icon icon-income"><i class="fa-solid fa-arrow-trend-up"></i></div>
+    <div class="stat-body">
+      <span class="stat-label">Total Income</span>
+      <span class="stat-value amt-income">{{ totals.income|inr }}</span>
+      <span class="stat-sub">All time</span>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon icon-expense"><i class="fa-solid fa-arrow-trend-down"></i></div>
+    <div class="stat-body">
+      <span class="stat-label">Total Expenses</span>
+      <span class="stat-value amt-expense">{{ totals.expense|inr }}</span>
+      <span class="stat-sub">All time</span>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon icon-balance"><i class="fa-solid fa-scale-balanced"></i></div>
+    <div class="stat-body">
+      <span class="stat-label">Current Balance</span>
+      <span class="stat-value {{ 'amt-income' if totals.balance >= 0 else 'amt-expense' }}">{{ totals.balance|inr }}</span>
+      <span class="stat-sub">Income minus expenses</span>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon icon-month"><i class="fa-solid fa-calendar-days"></i></div>
+    <div class="stat-body">
+      <span class="stat-label">Spent in {{ month_label }}</span>
+      <span class="stat-value">{{ month_totals.expense|inr }}</span>
+      <span class="stat-sub">Income this month: {{ month_totals.income|inr }}</span>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon icon-budget"><i class="fa-solid fa-bullseye"></i></div>
+    <div class="stat-body">
+      <span class="stat-label">Budget Used</span>
+      {% if budget %}
+      <span class="stat-value">{{ budget.percent }}%</span>
+      <div class="progress"><div class="progress-bar progress-{{ budget.state }}"
+           style="width: {{ budget.bar_width }}%"></div></div>
+      <span class="stat-sub">
+        {% if budget.remaining >= 0 %}{{ budget.remaining|inr }} left of {{ budget.budget|inr }}
+        {% else %}{{ (-budget.remaining)|inr }} over budget{% endif %}
+      </span>
+      {% else %}
+      <span class="stat-value">&mdash;</span>
+      <span class="stat-sub">No budget set. <a href="{{ url_for('budgets') }}">Set a monthly budget</a></span>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<div class="section-head">
+  <h2>Recent Transactions</h2>
+  <a href="{{ url_for('transactions') }}">View all</a>
+</div>
+<div class="card table-card">
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>Date</th><th>Type</th><th>Category / Source</th>
+            <th>Description</th><th class="num">Amount</th></tr>
+      </thead>
+      <tbody>
+        {% for t in recent %}
+        <tr>
+          <td>{{ t.date }}</td>
+          <td><span class="pill pill-{{ t.type }}">{{ t.type|capitalize }}</span></td>
+          <td>{{ t.category if t.type == 'expense' else t.source }}</td>
+          <td class="desc">{{ t.description or '—' }}
+            {% if t.is_sample %}<span class="pill pill-sample">Sample</span>{% endif %}</td>
+          <td class="num {{ 'amt-income' if t.type == 'income' else 'amt-expense' }}">
+            {{ '+' if t.type == 'income' else '-' }}{{ t.amount|inr }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<p class="muted-note">Charts and detailed reports arrive in Stage 5.</p>
+{% endif %}
 {% endblock %}

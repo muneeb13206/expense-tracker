@@ -173,3 +173,41 @@ form.inline { display: inline; }
 .form-actions { display: flex; gap: .75rem; margin-top: .5rem; flex-wrap: wrap; }
 
 @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+
+
+/* ===== Stage 4: dashboard ===== */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+             gap: 1rem; margin-bottom: 1.75rem; }
+.stat-card { display: flex; gap: 1rem; align-items: flex-start; padding: 1.1rem;
+             background: var(--surface); border: 1px solid var(--border);
+             border-radius: var(--radius); box-shadow: var(--shadow); }
+.stat-icon { flex: 0 0 46px; height: 46px; border-radius: 12px; font-size: 1.2rem;
+             display: flex; align-items: center; justify-content: center; }
+.icon-income  { background: rgba(22,163,74,.15);  color: var(--income); }
+.icon-expense { background: rgba(220,38,38,.12);  color: var(--expense); }
+.icon-balance, .icon-month { background: var(--primary-soft); color: var(--primary); }
+.icon-budget  { background: rgba(217,119,6,.15);  color: var(--warning); }
+.stat-body { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.stat-label { color: var(--muted); font-size: .85rem; font-weight: 600; }
+.stat-value { font-size: 1.5rem; font-weight: 700; line-height: 1.25; overflow-wrap: anywhere; }
+.stat-sub { color: var(--muted); font-size: .8rem; }
+.stat-sub a { color: var(--primary); font-weight: 600; }
+
+.progress { height: 8px; background: var(--border); border-radius: 999px;
+            overflow: hidden; margin: .45rem 0 .3rem; }
+.progress-bar { height: 100%; border-radius: 999px; }
+.progress-ok { background: var(--income); }
+.progress-warning { background: var(--warning); }
+.progress-over { background: var(--expense); }
+
+.section-head { display: flex; justify-content: space-between; align-items: center;
+                margin-bottom: .75rem; }
+.section-head h2 { font-size: 1.1rem; }
+.section-head a { color: var(--primary); font-weight: 600; font-size: .9rem; }
+
+.sample-banner { display: flex; justify-content: space-between; align-items: center;
+                 gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; padding: .7rem 1rem;
+                 background: var(--primary-soft); color: var(--primary);
+                 border-radius: 12px; font-size: .9rem; font-weight: 600; }
+.empty-actions { display: flex; gap: .75rem; justify-content: center; flex-wrap: wrap; }
+.empty-actions form { display: inline; }

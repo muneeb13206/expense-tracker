@@ -24,3 +24,22 @@ def format_inr(value):
             groups.insert(0, head)
         whole = ",".join(groups + [tail])
     return f"{sign}₹{whole}.{decimals}"
+
+
+def budget_status(spent, budget):
+    """
+    Compare spending with a budget. Returns None when no budget is set.
+    state: 'ok' (under 80%), 'warning' (80% up to the limit), 'over' (above the limit)
+    """
+    if not budget or budget <= 0:
+        return None
+    if spent > budget:
+        state = "over"
+    elif spent >= 0.8 * budget:
+        state = "warning"
+    else:
+        state = "ok"
+    percent = round(spent / budget * 100, 1)
+    return {"budget": budget, "spent": spent, "percent": percent,
+            "remaining": round(budget - spent, 2), "state": state,
+            "bar_width": min(percent, 100)}

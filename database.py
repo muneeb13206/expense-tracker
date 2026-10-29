@@ -276,6 +276,46 @@ def count_transactions(tx_type=None):
         params.append(tx_type)
     return get_db().execute(sql, params).fetchone()["n"]
 
+# ---------------------------------------------------------- summaries
+def _month_bounds(month):
+    """'2026-10' -> ('2026-10-01', '2026-11-01'): start (included), end (excluded)."""
+    year, mon = (int(part) for part in month.split("-"))
+    start = date(year, mon, 1)
+    end = date(year + (1 if mon == 12 else 0), mon % 12 + 1, 1)
+    return start.isoformat(), end.isoformat()
+
+
+def get_totals(month=None):
+    """
+    Total income, expenses and balance, calculated from the database.
+    month='YYYY-MM' limits the totals to that month; None means all time.
+    """
+    sql = "SELECT type, SUM(amount) AS total FROM transactions"
+    params = []
+    if month:
+        start, end = _month_bounds(month)
+        sql += " WHERE date >= ? AND date < ?"
+        params += [start, end]
+    sql += " GROUP BY type"
+
+    totals = {"income": 0.0, "expense": 0.0}
+    for row in get_db().execute(sql, params):
+        totals[row["type"]] = round(row["total"], 2)
+    totals["balance"] = round(totals["income"] - totals["expense"], 2)
+    return totals
+
+
+def get_monthly_budget(month):
+    """Return the budget row for 'YYYY-MM', or None if no budget is set."""
+    return get_db().execute(
+        "SELECT month, amount FROM monthly_budgets WHERE month = ?", (month,)
+    ).fetchone()
+
+
+def count_sample_transactions():
+    return get_db().execute(
+        "SELECT COUNT(*) AS n FROM transactions WHERE is_sample = 1"
+    ).fetchone()["n"]
 
 # -------------------------------------------------------------- sample data
 # (category, possible descriptions, min amount, max amount)
