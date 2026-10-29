@@ -211,3 +211,42 @@ form.inline { display: inline; }
                  border-radius: 12px; font-size: .9rem; font-weight: 600; }
 .empty-actions { display: flex; gap: .75rem; justify-content: center; flex-wrap: wrap; }
 .empty-actions form { display: inline; }
+
+
+/* ===== Stage 5: charts and reports ===== */
+.chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));
+              gap: 1rem; margin-bottom: 1.75rem; }
+.chart-card.wide { grid-column: 1 / -1; }
+.card-title { display: flex; justify-content: space-between; align-items: baseline;
+              flex-wrap: wrap; gap: .5rem; margin-bottom: .75rem; font-size: 1rem; }
+.card-sub { color: var(--muted); font-size: .8rem; font-weight: 500; }
+.chart-box { position: relative; height: 300px; }
+.chart-empty { height: 100%; display: flex; align-items: center; justify-content: center;
+               text-align: center; padding: 1rem; color: var(--muted); }
+
+.filter-card { margin-bottom: 1rem; }
+.range-form { display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap; }
+.range-form .field { margin-bottom: 0; min-width: 170px; }
+.presets { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin-top: 1rem; }
+.presets .spacer { flex: 1; }
+.chip { padding: .3rem .8rem; border: 1px solid var(--border); border-radius: 999px;
+        font-size: .82rem; font-weight: 600; color: var(--muted); }
+.chip:hover { background: var(--primary-soft); color: var(--primary); }
+.chip.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.report-range { margin: 0 0 1rem; }
+.section-head.spaced { margin-top: 1.75rem; }
+
+.data-table.narrow { min-width: 480px; }
+.data-table tfoot td { font-weight: 700; background: var(--bg);
+                       border-top: 2px solid var(--border); border-bottom: 0; }
+.share { display: flex; align-items: center; gap: .6rem; min-width: 170px; }
+.share-track { flex: 1; height: 8px; background: var(--border); border-radius: 999px; overflow: hidden; }
+.share-bar { height: 100%; background: var(--primary); border-radius: 999px; }
+.share span { font-size: .8rem; color: var(--muted); }
+
+@media print {
+  .sidebar, .topbar, .filter-card, .sample-banner, .alert { display: none !important; }
+  .app-shell { display: block; }
+  body { background: #fff; }
+  .card, .stat-card { box-shadow: none; break-inside: avoid; }
+}

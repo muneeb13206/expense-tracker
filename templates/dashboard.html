@@ -97,6 +97,23 @@
   </div>
 </section>
 
+<section class="chart-grid">
+  <div class="card chart-card">
+    <h2 class="card-title">Expense breakdown <span class="card-sub">{{ month_label }}</span></h2>
+    <div class="chart-box">
+      <canvas data-chart="doughnut" aria-label="Expense breakdown by category"
+              data-url="{{ url_for('api_category_breakdown', start=chart_start, end=chart_end) }}"></canvas>
+    </div>
+  </div>
+  <div class="card chart-card">
+    <h2 class="card-title">Monthly spending trend <span class="card-sub">Last 6 months</span></h2>
+    <div class="chart-box">
+      <canvas data-chart="line" aria-label="Monthly spending trend"
+              data-url="{{ url_for('api_monthly_summary', months=6) }}"></canvas>
+    </div>
+  </div>
+</section>
+
 <div class="section-head">
   <h2>Recent Transactions</h2>
   <a href="{{ url_for('transactions') }}">View all</a>
@@ -125,6 +142,13 @@
   </div>
 </div>
 
-<p class="muted-note">Charts and detailed reports arrive in Stage 5.</p>
+<p class="muted-note">Want more detail? Open the <a href="{{ url_for('reports') }}">Reports page</a> for date-range analysis.</p>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if has_data %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
 {% endif %}
 {% endblock %}

@@ -2,10 +2,208 @@
 {% block title %}Reports{% endblock %}
 {% block heading %}Reports{% endblock %}
 {% block content %}
+
+{% if not has_data %}
 <div class="card empty-state">
   <i class="fa-solid fa-chart-pie"></i>
-  <h2>Reports</h2>
-  <p>Charts, category summaries and CSV export will appear here.</p>
-  <span class="badge">Built in Stage 5</span>
+  <h2>No data to report yet</h2>
+  <p>Add some transactions, or load sample data from the Dashboard, then come back.</p>
+  <div class="empty-actions">
+    <a class="btn" href="{{ url_for('add_transaction') }}">
+      <i class="fa-solid fa-plus"></i> Add Transaction</a>
+    <a class="btn btn-secondary" href="{{ url_for('dashboard') }}">Go to Dashboard</a>
+  </div>
 </div>
+
+{% else %}
+
+<div class="card filter-card">
+  <form method="get" action="{{ url_for('reports') }}" class="range-form">
+    <div class="field">
+      <label for="start">From</label>
+      <input type="date" id="start" name="start" value="{{ start }}" max="{{ current_date }}" required>
+    </div>
+    <div class="field">
+      <label for="end">To</label>
+      <input type="date" id="end" name="end" value="{{ end }}" max="{{ current_date }}" required>
+    </div>
+    <button class="btn" type="submit"><i class="fa-solid fa-filter"></i> Apply</button>
+  </form>
+  <div class="presets">
+    {% for p in presets %}
+    <a class="chip {{ 'active' if p.start == start and p.end == end }}"
+       href="{{ url_for('reports', start=p.start, end=p.end) }}">{{ p.label }}</a>
+    {% endfor %}
+    <span class="spacer"></span>
+    <button type="button" class="btn btn-sm btn-secondary" onclick="window.print()">
+      <i class="fa-solid fa-print"></i> Print / Save as PDF</button>
+  </div>
+</div>
+
+<p class="muted-note report-range">Report for <strong>{{ start }}</strong> to <strong>{{ end }}</strong>
+  ({{ days }} day{{ '' if days == 1 else 's' }})</p>
+
+<section class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-icon icon-income"><i class="fa-solid fa-arrow-trend-up"></i></div>
+    <div class="stat-body">
+      <span class="stat-label">Income</span>
+      <span class="stat-value amt-income">{{ totals.income|inr }}</span>
+      <span class="stat-sub">In this period</span>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-expense"><i class="fa-solid fa-arrow-trend-down"></i></div>
+    <div class="stat-body">
+      <span class="stat-label">Expenses</span>
+      <span class="stat-value amt-expense">{{ totals.expense|inr }}</span>
+      <span class="stat-sub">In this period</span>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-balance"><i class="fa-solid fa-scale-balanced"></i></div>
+    <div class="stat-body">
+      <span class="stat-label">Net Savings</span>
+      <span class="stat-value {{ 'amt-income' if totals.balance >= 0 else 'amt-expense' }}">{{ totals.balance|inr }}</span>
+      <span class="stat-sub">Income minus expenses</span>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-month"><i class="fa-solid fa-calendar-day"></i></div>
+    <div class="stat-body">
+      <span class="stat-label">Average Daily Spend</span>
+      <span class="stat-value">{{ avg_daily|inr }}</span>
+      <span class="stat-sub">Over {{ days }} day{{ '' if days == 1 else 's' }}</span>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-budget"><i class="fa-solid fa-trophy"></i></div>
+    <div class="stat-body">
+      <span class="stat-label">Highest Spending Category</span>
+      {% if top %}
+      <span class="stat-value">{{ top.category }}</span>
+      <span class="stat-sub">{{ top.total|inr }} ({{ top.percent }}% of spending)</span>
+      {% else %}
+      <span class="stat-value">&mdash;</span>
+      <span class="stat-sub">No expenses in this period</span>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<section class="chart-grid">
+  <div class="card chart-card">
+    <h2 class="card-title">Expense breakdown <span class="card-sub">{{ start }} to {{ end }}</span></h2>
+    <div class="chart-box">
+      <canvas data-chart="doughnut" aria-label="Expense breakdown by category"
+              data-url="{{ url_for('api_category_breakdown', start=start, end=end) }}"></canvas>
+    </div>
+  </div>
+  <div class="card chart-card">
+    <h2 class="card-title">Income vs expenses <span class="card-sub">Last 6 months</span></h2>
+    <div class="chart-box">
+      <canvas data-chart="bar" aria-label="Income versus expenses by month"
+              data-url="{{ url_for('api_monthly_summary', months=6) }}"></canvas>
+    </div>
+  </div>
+  <div class="card chart-card wide">
+    <h2 class="card-title">Monthly spending trend <span class="card-sub">Last 12 months</span></h2>
+    <div class="chart-box">
+      <canvas data-chart="line" aria-label="Monthly spending trend"
+              data-url="{{ url_for('api_monthly_summary', months=12) }}"></canvas>
+    </div>
+  </div>
+</section>
+
+<div class="section-head"><h2>Category summary</h2></div>
+{% if breakdown %}
+<div class="card table-card">
+  <div class="table-wrap">
+    <table class="data-table narrow">
+      <thead>
+        <tr><th>Category</th><th class="num">Transactions</th>
+            <th class="num">Total</th><th>Share of spending</th></tr>
+      </thead>
+      <tbody>
+        {% for r in breakdown %}
+        <tr>
+          <td>{{ r['category'] }}</td>
+          <td class="num">{{ r['count'] }}</td>
+          <td class="num">{{ r['total']|inr }}</td>
+          <td>
+            <div class="share">
+              <div class="share-track"><div class="share-bar" style="width: {{ r['percent'] }}%"></div></div>
+              <span>{{ r['percent'] }}%</span>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr><td>Total</td><td class="num">{{ breakdown|sum(attribute='count') }}</td>
+            <td class="num">{{ totals.expense|inr }}</td><td></td></tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card"><p class="muted-note">No expenses were recorded between {{ start }} and {{ end }}.</p></div>
+{% endif %}
+
+<div class="section-head spaced"><h2>Monthly comparison</h2></div>
+<div class="card table-card">
+  <div class="table-wrap">
+    <table class="data-table narrow">
+      <thead>
+        <tr><th></th><th class="num">{{ comparison.last_label }}</th>
+            <th class="num">{{ comparison.this_label }} (so far)</th><th class="num">Change</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Income</td>
+          <td class="num">{{ comparison.last.income|inr }}</td>
+          <td class="num">{{ comparison.this.income|inr }}</td>
+          <td class="num">
+            {% set c = comparison.income_change %}
+            {% if c is none %}&mdash;
+            {% elif c > 0 %}<span class="amt-income">{{ '%+.1f'|format(c) }}%</span>
+            {% elif c < 0 %}<span class="amt-expense">{{ '%+.1f'|format(c) }}%</span>
+            {% else %}0.0%{% endif %}
+          </td>
+        </tr>
+        <tr>
+          <td>Expenses</td>
+          <td class="num">{{ comparison.last.expense|inr }}</td>
+          <td class="num">{{ comparison.this.expense|inr }}</td>
+          <td class="num">
+            {% set c = comparison.expense_change %}
+            {% if c is none %}&mdash;
+            {% elif c > 0 %}<span class="amt-expense">{{ '%+.1f'|format(c) }}%</span>
+            {% elif c < 0 %}<span class="amt-income">{{ '%+.1f'|format(c) }}%</span>
+            {% else %}0.0%{% endif %}
+          </td>
+        </tr>
+        <tr>
+          <td>Net savings</td>
+          <td class="num">{{ comparison.last.balance|inr }}</td>
+          <td class="num">{{ comparison.this.balance|inr }}</td>
+          <td class="num">
+            {% set d = comparison.this.balance - comparison.last.balance %}
+            <span class="{{ 'amt-income' if d >= 0 else 'amt-expense' }}">{{ d|inr }}</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+<p class="muted-note">Figures are calculated from your recorded transactions. They are for
+  information only and are not financial advice.</p>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if has_data %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+{% endif %}
 {% endblock %}

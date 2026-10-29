@@ -17,6 +17,7 @@
     root.setAttribute("data-theme", next);
     try { localStorage.setItem("theme", next); } catch (e) {}
     updateThemeIcon();
+    document.dispatchEvent(new Event("themechange"));   // lets charts.js redraw
   });
 
   menuBtn.addEventListener("click", function () {

@@ -7,13 +7,15 @@ app.py : creates the Flask application, configures it securely,
 """
 import os
 import secrets
-from datetime import date
+from datetime import date, timedelta
 
-from flask import Flask, abort, flash, redirect, render_template, request, url_for
+from flask import (Flask, abort, flash, jsonify, redirect, render_template,
+                   request, url_for)
 from flask_wtf.csrf import CSRFProtect
 
 import database
-from utils import budget_status, format_inr
+from utils import (budget_status, format_inr, percent_change, read_date_range,
+                   report_presets)
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 INSTANCE_DIR = os.path.join(BASE_DIR, "instance")
@@ -93,6 +95,8 @@ def register_routes(app: Flask) -> None:
                 budget=budget_status(month_totals["expense"],
                                      budget_row["amount"] if budget_row else None),
                 recent=database.list_transactions(limit=8),
+                chart_start=today.replace(day=1).isoformat(),
+                chart_end=today.isoformat(),
             )
         return render_template("dashboard.html", active="dashboard", **context)
 
@@ -175,7 +179,68 @@ def register_routes(app: Flask) -> None:
 
     @app.route("/reports")
     def reports():
-        return render_template("reports.html", active="reports")
+        today = date.today()
+        presets = report_presets(today, database.get_first_transaction_date())
+
+        start, end, error = read_date_range(request.args)
+        if error:
+            flash("Invalid date range. Showing this month instead.", "error")
+        if error or not (start and end):
+            start, end = presets[0]["start"], presets[0]["end"]   # default: this month
+
+        totals = database.get_range_totals(start, end)
+        breakdown = database.get_category_breakdown(start, end)
+        days = (date.fromisoformat(end) - date.fromisoformat(start)).days + 1
+
+        # This month (so far) compared with last month
+        month_start = today.replace(day=1)
+        last_month_end = month_start - timedelta(days=1)
+        this_totals = database.get_totals(today.strftime("%Y-%m"))
+        last_totals = database.get_totals(last_month_end.strftime("%Y-%m"))
+        comparison = {
+            "this_label": today.strftime("%B %Y"),
+            "last_label": last_month_end.strftime("%B %Y"),
+            "this": this_totals,
+            "last": last_totals,
+            "income_change": percent_change(last_totals["income"], this_totals["income"]),
+            "expense_change": percent_change(last_totals["expense"], this_totals["expense"]),
+        }
+
+        return render_template(
+            "reports.html", active="reports",
+            has_data=database.count_transactions() > 0,
+            start=start, end=end, presets=presets, days=days,
+            totals=totals, breakdown=breakdown,
+            top=breakdown[0] if breakdown else None,
+            avg_daily=totals["expense"] / days,
+            comparison=comparison,
+        )
+
+    # ---- JSON endpoints that feed the charts (read-only, real database data)
+    def api_error(message):
+        return jsonify(error=message), 400
+
+    @app.route("/api/charts/category-breakdown")
+    def api_category_breakdown():
+        start, end, error = read_date_range(request.args)
+        if error:
+            return api_error(error)
+        rows = database.get_category_breakdown(start, end)
+        return jsonify(labels=[r["category"] for r in rows],
+                       values=[r["total"] for r in rows],
+                       percents=[r["percent"] for r in rows],
+                       total=round(sum(r["total"] for r in rows), 2),
+                       start=start, end=end)
+
+    @app.route("/api/charts/monthly-summary")
+    def api_monthly_summary():
+        raw = request.args.get("months", "6")
+        if not (raw.isascii() and raw.isdigit() and 1 <= int(raw) <= 24):
+            return api_error("'months' must be a whole number from 1 to 24.")
+        series = database.get_monthly_series(int(raw))
+        return jsonify(labels=[m["label"] for m in series],
+                       income=[m["income"] for m in series],
+                       expense=[m["expense"] for m in series])
 
 
 def register_error_handlers(app: Flask) -> None:
@@ -207,6 +272,8 @@ def register_security_headers(app: Flask) -> None:
         resp.headers["X-Content-Type-Options"] = "nosniff"
         resp.headers["X-Frame-Options"] = "DENY"
         resp.headers["Referrer-Policy"] = "same-origin"
+        if request.path.startswith("/api/"):
+            resp.headers["Cache-Control"] = "no-store"   # charts always show fresh data
         return resp
 
 

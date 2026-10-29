@@ -317,6 +317,91 @@ def count_sample_transactions():
         "SELECT COUNT(*) AS n FROM transactions WHERE is_sample = 1"
     ).fetchone()["n"]
 
+# ------------------------------------------------------------- reports
+def _date_filter(column, start, end):
+    """
+    Build WHERE-clauses for an inclusive date range. 'column' is always a fixed
+    string written by us (never user input); the dates are bound with '?'.
+    """
+    clauses, params = [], []
+    if start:
+        clauses.append(f"{column} >= ?")
+        params.append(start)
+    if end:
+        clauses.append(f"{column} <= ?")
+        params.append(end)
+    return clauses, params
+
+
+def get_range_totals(start=None, end=None):
+    """Income, expense and balance between two ISO dates (both included)."""
+    clauses, params = _date_filter("date", start, end)
+    sql = "SELECT type, SUM(amount) AS total FROM transactions"
+    if clauses:
+        sql += " WHERE " + " AND ".join(clauses)
+    sql += " GROUP BY type"
+
+    totals = {"income": 0.0, "expense": 0.0}
+    for row in get_db().execute(sql, params):
+        totals[row["type"]] = round(row["total"], 2)
+    totals["balance"] = round(totals["income"] - totals["expense"], 2)
+    return totals
+
+
+def get_category_breakdown(start=None, end=None):
+    """
+    Expense totals per category (highest first) for an optional date range.
+    Each item: {category, total, count, percent}.
+    """
+    clauses, params = _date_filter("t.date", start, end)
+    sql = """SELECT c.name AS category, SUM(t.amount) AS total, COUNT(*) AS count
+             FROM transactions t JOIN categories c ON c.id = t.category_id
+             WHERE t.type = 'expense'"""
+    for clause in clauses:
+        sql += " AND " + clause
+    sql += " GROUP BY c.id ORDER BY total DESC, c.name ASC"
+
+    rows = get_db().execute(sql, params).fetchall()
+    grand = sum(r["total"] for r in rows)
+    return [{"category": r["category"],
+             "total": round(r["total"], 2),
+             "count": r["count"],
+             "percent": round(r["total"] / grand * 100, 1) if grand else 0.0}
+            for r in rows]
+
+
+def _recent_months(count, today):
+    """['2026-05', ..., '2026-10'] - oldest first, ending with today's month."""
+    months = []
+    for back in range(count - 1, -1, -1):
+        year, month = divmod(today.year * 12 + today.month - 1 - back, 12)
+        months.append(f"{year:04d}-{month + 1:02d}")
+    return months
+
+
+def get_monthly_series(count=6, today=None):
+    """Income and expenses for each of the last 'count' months (zeros included)."""
+    today = today or date.today()
+    months = _recent_months(count, today)
+    rows = get_db().execute(
+        """SELECT substr(date, 1, 7) AS month, type, SUM(amount) AS total
+           FROM transactions WHERE date >= ? GROUP BY month, type""",
+        (months[0] + "-01",),
+    ).fetchall()
+
+    data = {m: {"income": 0.0, "expense": 0.0} for m in months}
+    for row in rows:
+        if row["month"] in data:
+            data[row["month"]][row["type"]] = round(row["total"], 2)
+    return [{"month": m,
+             "label": date(int(m[:4]), int(m[5:]), 1).strftime("%b %Y"),
+             **data[m]} for m in months]
+
+
+def get_first_transaction_date():
+    """Date of the oldest transaction (ISO string), or None if there are none."""
+    return get_db().execute("SELECT MIN(date) AS first FROM transactions").fetchone()["first"]
+
 # -------------------------------------------------------------- sample data
 # (category, possible descriptions, min amount, max amount)
 _SAMPLE_EXPENSES = [
